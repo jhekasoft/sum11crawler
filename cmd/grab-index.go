@@ -17,8 +17,6 @@ func init() {
 	rootCmd.AddCommand(grabIndexCmd)
 }
 
-var usersCount int
-
 var grabIndexCmd = &cobra.Command{
 	Use:   "grab-index",
 	Short: "Grab index",
