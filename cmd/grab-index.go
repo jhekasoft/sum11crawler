@@ -13,9 +13,20 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	indexMain   = "/vkazivnyk"      // СУМ-11
+	indexNewest = "/vkazivnyk/vits" // Новітній користувацькій словник
+	nameMain    = "sum.in.ua"
+	nameNewest  = "sum.in.ua_user"
+)
+
 func init() {
 	rootCmd.AddCommand(grabIndexCmd)
+
+	grabIndexCmd.Flags().StringVarP(&vocabulary, "vocabulary", "v", "sum.in.ua", "Vocabulary")
 }
+
+var vocabulary string
 
 var grabIndexCmd = &cobra.Command{
 	Use:   "grab-index",
@@ -30,11 +41,23 @@ var grabIndexCmd = &cobra.Command{
 		// Migrate the schema
 		db.AutoMigrate(&models.Link{})
 
-		parseIndex(db, sumInUaBaseURL+"/vkazivnyk", nil)
+		// Index URL
+		index := indexMain
+		if vocabulary != nameMain {
+			index = indexNewest
+		}
+
+		// Name
+		name := nameMain
+		if vocabulary != nameMain {
+			name = nameNewest
+		}
+
+		parseIndex(db, sumInUaBaseURL+index, name, nil)
 	},
 }
 
-func parseIndex(db *gorm.DB, url string, parentLink *models.Link) {
+func parseIndex(db *gorm.DB, url string, vocabulary string, parentLink *models.Link) {
 	if db == nil {
 		panic("parse error. no DB")
 	}
@@ -66,8 +89,9 @@ func parseIndex(db *gorm.DB, url string, parentLink *models.Link) {
 			fmt.Printf("Index %d: %s %s\n", i, li.Text(), href)
 
 			newIndex := models.Link{
-				URL:  href,
-				Type: LinkTypeIndex,
+				URL:        href,
+				Type:       LinkTypeIndex,
+				Vocabulary: vocabulary,
 			}
 			if parentLink != nil {
 				newIndex.ParentID = &parentLink.ID
@@ -75,7 +99,7 @@ func parseIndex(db *gorm.DB, url string, parentLink *models.Link) {
 			}
 			db.Create(&newIndex)
 
-			parseIndex(db, sumInUaBaseURL+href, &newIndex)
+			parseIndex(db, sumInUaBaseURL+href, vocabulary, &newIndex)
 			continue
 		}
 
@@ -83,8 +107,9 @@ func parseIndex(db *gorm.DB, url string, parentLink *models.Link) {
 		fmt.Printf("Article %d: %s %s\n", i, li.Text(), href)
 
 		newArticle := models.Link{
-			URL:  href,
-			Type: LinkTypeArticle,
+			URL:        href,
+			Type:       LinkTypeArticle,
+			Vocabulary: vocabulary,
 		}
 		if parentLink != nil {
 			newArticle.ParentID = &parentLink.ID

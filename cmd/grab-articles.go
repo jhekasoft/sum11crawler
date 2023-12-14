@@ -53,7 +53,8 @@ func grabArticles(db *gorm.DB) {
 		}
 		// defer res.Body.Close()
 		if res.StatusCode != 200 {
-			log.Fatalf("status code error: %d %s", res.StatusCode, res.Status)
+			log.Printf("status code error: %d %s", res.StatusCode, res.Status)
+			continue
 		}
 
 		b, err := io.ReadAll(res.Body)
