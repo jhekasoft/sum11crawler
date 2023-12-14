@@ -6,22 +6,20 @@
 go run main.go grab-index
 ```
 
-## Download articles
-
+## Download SUM-11 articles
 
 ```bash
 go run main.go grab-articles
 ```
 
-##  Grab SUM-11 user`s index
-
+## Grab SUM-11 user`s index
 
 ```bash
 go run main.go grab-index -v sum.in.ua_user
 ```
 
-## Download articles
-
+## Download SUM-11 user`s articles
 
 ```bash
-go run
+go run main.go grab-articles
+```
