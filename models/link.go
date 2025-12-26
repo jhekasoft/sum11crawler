@@ -13,4 +13,5 @@ type Link struct {
 	ParentID   *uint
 	ParentURL  *string
 	Vocabulary string `gorm:"default:sum.in.ua;not null"`
+	Desc       *string
 }
