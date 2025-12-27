@@ -50,20 +50,22 @@ func parseAndStoreArticles(db *gorm.DB) {
 			fmt.Println("No HTML")
 			continue
 		}
-		title, desc, err := parseArticle(*item.HTML)
+		word, title, desc, err := parseArticle(*item.HTML)
 		if err != nil {
 			fmt.Println(err.Error())
 		}
 
 		fmt.Println(title)
 
+		item.Word = &word
+		item.Title = &title
 		item.Desc = &desc
-		item.Word = &title
+		item.Title = &title
 		db.Save(item)
 	}
 }
 
-func parseArticle(html string) (title, desc string, err error) {
+func parseArticle(html string) (word, title, desc string, err error) {
 	// Load the HTML document
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(html))
 	if err != nil {
@@ -75,10 +77,13 @@ func parseArticle(html string) (title, desc string, err error) {
 		err = errors.New("no article element")
 	}
 
-	titleSel := articleSel.Find("[itemprop=headline]")
-	if titleSel != nil {
-		title = titleSel.Text()
+	wordSel := articleSel.Find("[itemprop=headline]")
+	if wordSel != nil {
+		word = wordSel.Text() // Example: АБОНУВА́ТИСЯ
 	}
+
+	// Replace acute accents
+	title = strings.Replace(word, "\u0301", "", -1) // Example: АБОНУВАТИСЯ
 
 	desc = articleSel.Text()
 	return
