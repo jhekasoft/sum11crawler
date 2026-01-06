@@ -111,12 +111,12 @@ func parseDesc(s *goquery.Selection) string {
 	f = func(n *html.Node) {
 		if n.Type == html.TextNode {
 			// Remove new lines
-			data := strings.ReplaceAll(n.Data, "\n\n", " ")
+			data := strings.ReplaceAll(n.Data, "\n", " ")
 			builder.WriteString(data)
 		}
 		// Add new lines before <p> and <br> tags
 		if n.Type == html.ElementNode && (slices.Contains([]string{"p", "br"}, n.Data)) {
-			builder.WriteString("\n")
+			builder.WriteString("\n\n")
 		}
 		if n.FirstChild != nil {
 			for c := n.FirstChild; c != nil; c = c.NextSibling {

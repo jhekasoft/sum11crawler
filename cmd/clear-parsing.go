@@ -29,6 +29,12 @@ var clearParsingCmd = &cobra.Command{
 func clearParsing(db *gorm.DB) {
 	err := db.Model(&models.Link{}).
 		Where("type = ?", LinkTypeArticle).
+		Where(
+			db.Session(&gorm.Session{}).Unscoped().
+				Where("word IS NOT NULL").
+				Or("title IS NOT NULL").
+				Or("desc IS NOT NULL"),
+		).
 		Updates(map[string]interface{}{"word": nil, "title": nil, "desc": nil}).Error
 
 	if err != nil {
