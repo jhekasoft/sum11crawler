@@ -3,12 +3,14 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sum11crawler/models"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/glebarez/sqlite"
 	"github.com/spf13/cobra"
+	"golang.org/x/net/html"
 	"gorm.io/gorm"
 )
 
@@ -35,7 +37,8 @@ var parseArticlesCmd = &cobra.Command{
 
 func parseAndStoreArticles(db *gorm.DB) {
 	var items []models.Link
-	q := db.Where("(html IS NOT NULL OR html != ?) AND desc IS NULL AND type = ?", "", LinkTypeArticle)
+	// q := db.Where("(html IS NOT NULL OR html != ?) AND desc IS NULL AND type = ?", "", LinkTypeArticle)
+	q := db.Where("(html IS NOT NULL OR html != ?) AND type = ?", "", LinkTypeArticle)
 	err := q.Find(&items).Error
 	if err != nil {
 		panic(err)
@@ -83,8 +86,38 @@ func parseArticle(html string) (word, title, desc string, err error) {
 	}
 
 	// Replace acute accents
-	title = strings.Replace(word, "\u0301", "", -1) // Example: АБОНУВАТИСЯ
+	title = strings.ReplaceAll(word, "\u0301", "") // Example: АБОНУВАТИСЯ
 
-	desc = articleSel.Text()
+	desc = GetDesc(articleSel)
 	return
+}
+
+// GetDesc gets the combined text contents of each element in the set of matched
+// elements, including their descendants without new lines in Data.
+func GetDesc(s *goquery.Selection) string {
+	var builder strings.Builder
+
+	// Slightly optimized vs calling Each: no single selection object created
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		if n.Type == html.TextNode {
+			// Remove new lines
+			data := strings.ReplaceAll(n.Data, "\n", " ")
+			builder.WriteString(data)
+		}
+		// Add new lines before <p> and <br> tags
+		if n.Type == html.ElementNode && (slices.Contains([]string{"p", "br"}, n.Data)) {
+			builder.WriteString("\n")
+		}
+		if n.FirstChild != nil {
+			for c := n.FirstChild; c != nil; c = c.NextSibling {
+				f(c)
+			}
+		}
+	}
+	for _, n := range s.Nodes {
+		f(n)
+	}
+
+	return strings.TrimSpace(builder.String())
 }

@@ -9,10 +9,10 @@ type Link struct {
 	URL        string `gorm:"uniqueIndex"`
 	Type       string
 	HTML       *string
-	Word       *string
+	Word       *string `gorm:"index"`
 	ParentID   *uint
 	ParentURL  *string
 	Vocabulary string `gorm:"default:sum.in.ua;not null"`
 	Desc       *string
-	Title      *string
+	Title      *string `gorm:"index"`
 }

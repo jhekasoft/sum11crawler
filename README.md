@@ -23,3 +23,11 @@ go run main.go grab-index -v sum.in.ua_user
 ```bash
 go run main.go grab-articles
 ```
+
+## Tests
+
+Run tests:
+
+```bash
+go test ./... -v
+```
