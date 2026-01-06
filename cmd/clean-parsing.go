@@ -8,11 +8,11 @@ import (
 	"gorm.io/gorm"
 )
 
-// clearParsingCmd represents the clear-parsing command
-var clearParsingCmd = &cobra.Command{
-	Use:   "clear-parsing",
-	Short: "Clear parsed data",
-	Long:  `Clear parsed data`,
+// cleanParsingCmd represents the clean-parsing command
+var cleanParsingCmd = &cobra.Command{
+	Use:   "clean-parsing",
+	Short: "Clean parsed data",
+	Long:  `Clean parsed data`,
 	Run: func(cmd *cobra.Command, args []string) {
 		db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 		if err != nil {
@@ -35,7 +35,7 @@ func clearParsing(db *gorm.DB) {
 				Or("title IS NOT NULL").
 				Or("desc IS NOT NULL"),
 		).
-		Updates(map[string]interface{}{"word": nil, "title": nil, "desc": nil}).Error
+		Updates(map[string]any{"word": nil, "title": nil, "desc": nil}).Error
 
 	if err != nil {
 		panic(err)
@@ -43,5 +43,5 @@ func clearParsing(db *gorm.DB) {
 }
 
 func init() {
-	rootCmd.AddCommand(clearParsingCmd)
+	rootCmd.AddCommand(cleanParsingCmd)
 }
