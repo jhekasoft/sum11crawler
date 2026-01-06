@@ -36,19 +36,22 @@ var parseArticlesCmd = &cobra.Command{
 }
 
 func parseAndStoreArticles(db *gorm.DB) {
+	var total int64
+	db.Model(&models.Link{}).Where("(html IS NOT NULL OR html != ?) AND type = ?", "", LinkTypeArticle).Count(&total)
+
 	var items []models.Link
-	// q := db.Where("(html IS NOT NULL OR html != ?) AND desc IS NULL AND type = ?", "", LinkTypeArticle)
-	q := db.Where("(html IS NOT NULL OR html != ?) AND type = ?", "", LinkTypeArticle)
+	q := db.Where("(html IS NOT NULL OR html != ?) AND desc IS NULL AND type = ?", "", LinkTypeArticle)
 	err := q.Find(&items).Error
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("Selected articles: %d\n", len(items))
+	itemsCount := len(items)
+	doneCount := total - int64(itemsCount)
+
+	fmt.Printf("Selected articles: %d\n", itemsCount)
 
 	for i, item := range items {
-		fmt.Printf("Link %d: %s\n", i, item.URL)
-
 		if item.HTML == nil {
 			fmt.Println("No HTML")
 			continue
@@ -58,14 +61,20 @@ func parseAndStoreArticles(db *gorm.DB) {
 			fmt.Println(err.Error())
 		}
 
-		fmt.Println(title)
+		percentage := calcPercentage(int(doneCount)+i+1, int(total))
+
+		// Output to the CLI
+		fmt.Printf("\rLink: %s\nWord: %s\n%.2f%%", item.URL, word, percentage)
 
 		item.Word = &word
-		item.Title = &title
 		item.Desc = &desc
 		item.Title = &title
 		db.Save(item)
 	}
+}
+
+func calcPercentage(part, total int) float32 {
+	return float32(part) / float32(total) * 100
 }
 
 func parseArticle(html string) (word, title, desc string, err error) {
@@ -88,13 +97,13 @@ func parseArticle(html string) (word, title, desc string, err error) {
 	// Replace acute accents
 	title = strings.ReplaceAll(word, "\u0301", "") // Example: АБОНУВАТИСЯ
 
-	desc = GetDesc(articleSel)
+	desc = parseDesc(articleSel)
 	return
 }
 
-// GetDesc gets the combined text contents of each element in the set of matched
+// parseDesc gets the combined text contents of each element in the set of matched
 // elements, including their descendants without new lines in Data.
-func GetDesc(s *goquery.Selection) string {
+func parseDesc(s *goquery.Selection) string {
 	var builder strings.Builder
 
 	// Slightly optimized vs calling Each: no single selection object created
@@ -102,7 +111,7 @@ func GetDesc(s *goquery.Selection) string {
 	f = func(n *html.Node) {
 		if n.Type == html.TextNode {
 			// Remove new lines
-			data := strings.ReplaceAll(n.Data, "\n", " ")
+			data := strings.ReplaceAll(n.Data, "\n\n", " ")
 			builder.WriteString(data)
 		}
 		// Add new lines before <p> and <br> tags
