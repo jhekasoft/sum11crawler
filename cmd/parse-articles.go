@@ -51,26 +51,39 @@ func parseAndStoreArticles(db *gorm.DB) {
 
 	fmt.Printf("Selected articles: %d\n", itemsCount)
 
-	for i, item := range items {
-		if item.HTML == nil {
-			fmt.Println("No HTML")
-			continue
+	// var parsedItems []models.Link
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		for i, item := range items {
+			if item.HTML == nil {
+				fmt.Println("No HTML")
+				continue
+			}
+			word, title, desc, err := parseArticle(*item.HTML)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+
+			percentage := calcPercentage(int(doneCount)+i+1, int(total))
+
+			// Output to the CLI
+			fmt.Printf("\rLink: %s\nWord: %s\n%.2f%%", item.URL, word, percentage)
+
+			item.Word = &word
+			item.Desc = &desc
+			item.Title = &title
+			err = tx.Save(item).Error
+			if err != nil {
+				return err
+			}
+
+			// parsedItems := append(parsedItems, item)
 		}
-		word, title, desc, err := parseArticle(*item.HTML)
-		if err != nil {
-			fmt.Println(err.Error())
-		}
 
-		percentage := calcPercentage(int(doneCount)+i+1, int(total))
+		fmt.Println("\nWriting...")
 
-		// Output to the CLI
-		fmt.Printf("\rLink: %s\nWord: %s\n%.2f%%", item.URL, word, percentage)
-
-		item.Word = &word
-		item.Desc = &desc
-		item.Title = &title
-		db.Save(item)
-	}
+		return nil
+	})
 }
 
 func calcPercentage(part, total int) float32 {
