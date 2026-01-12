@@ -19,10 +19,10 @@ func NewSumService(db *gorm.DB, parser *SumParser) *SumService {
 
 func (s *SumService) ParseAndStoreArticles(messagesF func(string), percentageF func(models.ParsingPercentage)) {
 	var total int64
-	s.db.Model(&models.Link{}).Where("(html IS NOT NULL OR html != ?) AND type = ?", "", LinkTypeArticle).Count(&total)
+	s.db.Model(&models.Link{}).Where("(html IS NOT NULL AND html != ?) AND type = ?", "", LinkTypeArticle).Count(&total)
 
 	var items []models.Link
-	q := s.db.Where("(html IS NOT NULL OR html != ?) AND desc IS NULL AND type = ?", "", LinkTypeArticle)
+	q := s.db.Where("(html IS NOT NULL AND html != ?) AND desc IS NULL AND type = ?", "", LinkTypeArticle)
 	err := q.Find(&items).Error
 	if err != nil {
 		panic(err)
@@ -36,6 +36,14 @@ func (s *SumService) ParseAndStoreArticles(messagesF func(string), percentageF f
 	partCount := int(doneCount)
 
 	goroutineCount := 10
+	if itemsCount < goroutineCount {
+		goroutineCount = itemsCount
+	}
+	if goroutineCount <= 0 {
+		messagesF("Nothing to parse")
+		return
+	}
+
 	var parsedItems []models.Link
 	var parsingMu sync.Mutex
 	var parsingWG sync.WaitGroup

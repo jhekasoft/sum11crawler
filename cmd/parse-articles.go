@@ -37,8 +37,8 @@ var parseArticlesCmd = &cobra.Command{
 			func(p models.ParsingPercentage) {
 				fmt.Printf(
 					"\r-------------------------\nLink: %s\nWord: %s\n%.2f%%",
-					p.Word,
 					p.URL,
+					p.Word,
 					p.Percentage,
 				)
 			},
