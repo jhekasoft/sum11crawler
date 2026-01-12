@@ -17,7 +17,7 @@ func NewSumService(db *gorm.DB, parser *SumParser) *SumService {
 	return &SumService{db, parser}
 }
 
-func (s *SumService) ParseAndStoreArticles(messagesCh chan string, percentageCh chan models.ParsingPercentage) {
+func (s *SumService) ParseAndStoreArticles(messagesF func(string), percentageF func(models.ParsingPercentage)) {
 	var total int64
 	s.db.Model(&models.Link{}).Where("(html IS NOT NULL OR html != ?) AND type = ?", "", LinkTypeArticle).Count(&total)
 
@@ -31,14 +31,14 @@ func (s *SumService) ParseAndStoreArticles(messagesCh chan string, percentageCh 
 	itemsCount := len(items)
 	doneCount := total - int64(itemsCount)
 
-	messagesCh <- fmt.Sprintf("Selected articles: %d", itemsCount)
+	messagesF(fmt.Sprintf("Selected articles: %d", itemsCount))
 
 	partCount := int(doneCount)
 
 	goroutineCount := 10
 	var parsedItems []models.Link
 	var parsingMu sync.Mutex
-	var parsingWg sync.WaitGroup
+	var parsingWG sync.WaitGroup
 
 	itemsPerGoroutine := itemsCount / goroutineCount
 
@@ -54,18 +54,18 @@ func (s *SumService) ParseAndStoreArticles(messagesCh chan string, percentageCh 
 				goroutineItems = items[from:to]
 			}
 
-			parsingWg.Add(1)
+			parsingWG.Add(1)
 
 			go func() {
-				defer parsingWg.Done()
+				defer parsingWG.Done()
 				for _, item := range goroutineItems {
 					if item.HTML == nil {
-						messagesCh <- "No HTML"
+						messagesF("No HTML")
 						continue
 					}
 					word, title, desc, err := s.parser.ParseArticle(*item.HTML)
 					if err != nil {
-						messagesCh <- err.Error()
+						messagesF(err.Error())
 					}
 
 					item.Word = &word
@@ -85,23 +85,20 @@ func (s *SumService) ParseAndStoreArticles(messagesCh chan string, percentageCh 
 					percentage := s.calcPercentage(partCount, int(total))
 
 					// Output percentage data
-					percentageCh <- models.ParsingPercentage{
+					percentageF(models.ParsingPercentage{
 						Percentage: percentage,
 						Word:       word,
 						URL:        item.URL,
-					}
+					})
 				}
 			}()
 		}
 
-		parsingWg.Wait()
-		messagesCh <- "Writing..."
+		parsingWG.Wait()
+		messagesF("Writing...")
 
 		return nil
 	})
-
-	close(messagesCh)
-	close(percentageCh)
 }
 
 func (s *SumService) calcPercentage(part, total int) float32 {
