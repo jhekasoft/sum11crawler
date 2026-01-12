@@ -30,8 +30,8 @@ var parseArticlesCmd = &cobra.Command{
 		p := service.NewSumParser()
 		s := service.NewSumService(db, p)
 
-		messagesCh := make(chan string)
-		percentageCh := make(chan models.ParsingPercentage)
+		messagesCh := make(chan string, 1)
+		percentageCh := make(chan models.ParsingPercentage, 1)
 
 		go s.ParseAndStoreArticles(messagesCh, percentageCh)
 
@@ -47,7 +47,12 @@ var parseArticlesCmd = &cobra.Command{
 					if !ok {
 						return
 					}
-					fmt.Printf("\r-----\nLink: %s\nWord: %s\n%.2f%%", p.Word, p.URL, p.Percentage)
+					fmt.Printf(
+						"\r-------------------------\nLink: %s\nWord: %s\n%.2f%%",
+						p.Word,
+						p.URL,
+						p.Percentage,
+					)
 				}
 			}
 		}()
